@@ -1,0 +1,177 @@
+{
+  "users": {
+    "user1": {
+      "uid": "user1",
+      "email": "test1@example.com",
+      "displayName": "山田太郎",
+      "region": "東京都",
+      "organization": "テスト株式会社",
+      "ageGroup": "age_30s",
+      "gender": "male",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "lastLoginAt": "2024-01-15T10:30:00.000Z"
+    },
+    "user2": {
+      "uid": "user2", 
+      "email": "test2@example.com",
+      "displayName": "佐藤花子",
+      "region": "大阪府",
+      "organization": "サンプル会社",
+      "ageGroup": "age_20s",
+      "gender": "female",
+      "createdAt": "2024-01-02T00:00:00.000Z",
+      "lastLoginAt": "2024-01-15T09:15:00.000Z"
+    },
+    "user3": {
+      "uid": "user3",
+      "email": "test3@example.com", 
+      "displayName": "田中次郎",
+      "region": "愛知県",
+      "ageGroup": "age_40s",
+      "gender": "male",
+      "createdAt": "2024-01-03T00:00:00.000Z",
+      "lastLoginAt": "2024-01-14T18:45:00.000Z"
+    }
+  },
+  "rooms": {
+    "room1": {
+      "roomId": "room1",
+      "ownerUid": "user1",
+      "visibility": "public",
+      "chatType": "1v1",
+      "title": "プロジェクト相談",
+      "notice": "新しいプロジェクトについて相談しましょう。",
+      "createdAt": "2024-01-10T09:00:00.000Z",
+      "isActive": true,
+      "participants": ["user1", "user2"],
+      "aiProxyEnabled": true,
+      "aiProxyConfig": {
+        "timeoutSecs": 30,
+        "keywords": ["緊急", "至急", "重要"],
+        "model": "gpt-4o-mini"
+      }
+    },
+    "room2": {
+      "roomId": "room2",
+      "ownerUid": "user2", 
+      "visibility": "private",
+      "chatType": "1vN",
+      "title": "チームミーティング",
+      "notice": "毎週火曜日のチームミーティングです。進捗や課題を共有しましょう。",
+      "createdAt": "2024-01-11T14:30:00.000Z",
+      "isActive": true,
+      "participants": ["user1", "user2", "user3"],
+      "aiProxyEnabled": false,
+      "aiProxyConfig": {
+        "timeoutSecs": 60,
+        "keywords": [],
+        "model": "gpt-4o"
+      }
+    },
+    "room3": {
+      "roomId": "room3",
+      "ownerUid": "user3",
+      "visibility": "public",
+      "chatType": "1vN",
+      "title": "技術的な質問・相談",
+      "notice": "技術的な疑問や新しい技術について自由に質問・議論する場です。",
+      "createdAt": "2024-01-12T16:15:00.000Z",
+      "isActive": true,
+      "participants": ["user3"],
+      "aiProxyEnabled": true,
+      "aiProxyConfig": {
+        "timeoutSecs": 45,
+        "keywords": ["質問", "エラー", "バグ"],
+        "model": "gemini-1.5"
+      }
+    }
+  },
+  "messages": {
+    "msg1": {
+      "msgId": "msg1",
+      "roomId": "room1",
+      "senderUid": "user1",
+      "text": "おはようございます！新しいプロジェクトについて相談があります。",
+      "createdAt": "2024-01-15T09:00:00.000Z",
+      "isDeleted": false,
+      "isAiGenerated": false
+    },
+    "msg2": {
+      "msgId": "msg2",
+      "roomId": "room1", 
+      "senderUid": "user2",
+      "text": "おはようございます！どのような内容でしょうか？",
+      "createdAt": "2024-01-15T09:05:00.000Z",
+      "isDeleted": false,
+      "isAiGenerated": false
+    },
+    "msg3": {
+      "msgId": "msg3",
+      "roomId": "room1",
+      "senderUid": "user1", 
+      "text": "新しいチャットアプリケーションの開発を検討しています。AI機能も含めて。",
+      "createdAt": "2024-01-15T09:10:00.000Z",
+      "isDeleted": false,
+      "isAiGenerated": false
+    },
+    "msg4": {
+      "msgId": "msg4",
+      "roomId": "room2",
+      "senderUid": "user2",
+      "text": "今週のチームミーティングを開始します。進捗を共有していきましょう。",
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "isDeleted": false,
+      "isAiGenerated": false
+    },
+    "msg5": {
+      "msgId": "msg5",
+      "roomId": "room2",
+      "senderUid": "user1",
+      "text": "認証システムの実装が完了しました。次はチャット機能に取り掛かります。",
+      "createdAt": "2024-01-15T10:05:00.000Z",
+      "isDeleted": false,
+      "isAiGenerated": false
+    },
+    "msg6": {
+      "msgId": "msg6",
+      "roomId": "room3",
+      "senderUid": "user3",
+      "text": "Reactの状態管理について質問があります。ZustandとReduxどちらが良いでしょうか？",
+      "createdAt": "2024-01-15T11:00:00.000Z",
+      "isDeleted": false,
+      "isAiGenerated": false
+    }
+  },
+  "aiSummaries": {
+    "summary1": {
+      "sumId": "summary1",
+      "roomId": "room1",
+      "content": "新しいチャットアプリケーションの開発について相談が始まりました。AI機能の実装も検討されています。",
+      "createdAt": "2024-01-15T09:15:00.000Z",
+      "tokenUsage": 45
+    }
+  },
+  "userBilling": {
+    "user1": {
+      "uid": "user1",
+      "plan": "free",
+      "tokensUsedThisMonth": 150,
+      "tokensLimit": 1000,
+      "billingCycle": "2024-01-01T00:00:00.000Z"
+    },
+    "user2": {
+      "uid": "user2",
+      "plan": "subscription",
+      "tokensUsedThisMonth": 2500,
+      "tokensLimit": -1,
+      "billingCycle": "2024-01-01T00:00:00.000Z"
+    },
+    "user3": {
+      "uid": "user3",
+      "plan": "payg",
+      "tokensUsedThisMonth": 500,
+      "tokensLimit": 5000,
+      "billingCycle": "2024-01-01T00:00:00.000Z"
+    }
+  }
+}
