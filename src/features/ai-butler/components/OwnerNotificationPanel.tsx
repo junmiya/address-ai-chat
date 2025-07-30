@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/shared/components';
 import { OwnerNotification } from '@/lib/ai/butlerAI';
 
@@ -14,9 +14,9 @@ interface OwnerNotificationPanelProps {
 
 interface NotificationItemProps {
   notification: OwnerNotification;
-  onMarkAsRead?: (id: string) => void;
-  onRespond?: (id: string, response: string) => void;
-  onDismiss?: (id: string) => void;
+  onMarkAsRead: ((id: string) => void) | undefined;
+  onRespond: ((id: string, response: string) => void) | undefined;
+  onDismiss: ((id: string) => void) | undefined;
 }
 
 const UrgencyBadge: React.FC<{ urgency: 'low' | 'medium' | 'high' | 'emergency' }> = ({ urgency }) => {

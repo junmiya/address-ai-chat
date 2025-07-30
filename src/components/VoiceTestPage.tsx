@@ -7,7 +7,7 @@ import { Button } from '@/shared/components';
 
 export const VoiceTestPage: React.FC = () => {
   const { user, signIn, isLoading } = useMockAuth();
-  const [testRoomId, setTestRoomId] = useState('test-voice-room-001');
+  const [testRoomId] = useState('test-voice-room-001');
   const [email, setEmail] = useState('test1@example.com');
   const [password, setPassword] = useState('password123');
 
