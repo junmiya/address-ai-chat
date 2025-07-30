@@ -4,6 +4,9 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@/types';
 import { Timestamp } from 'firebase/firestore';
 
+// SSRセーフティチェック
+const isClient = typeof window !== 'undefined';
+
 interface MockAuthContextType {
   user: User | null;
   isLoading: boolean;
@@ -61,6 +64,12 @@ export function MockAuthProvider({ children }: MockAuthProviderProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // SSR対応：クライアントサイドでのみ実行
+    if (!isClient) {
+      setIsInitialized(true);
+      return;
+    }
+
     // 初期化処理：localStorageから既存のセッションを復元
     const savedUser = localStorage.getItem('mockAuthUser');
     if (savedUser) {
@@ -68,7 +77,9 @@ export function MockAuthProvider({ children }: MockAuthProviderProps) {
         setUser(JSON.parse(savedUser));
       } catch (error) {
         console.error('Failed to parse saved user:', error);
-        localStorage.removeItem('mockAuthUser');
+        if (isClient) {
+          localStorage.removeItem('mockAuthUser');
+        }
       }
     }
     setIsInitialized(true);
@@ -117,7 +128,9 @@ export function MockAuthProvider({ children }: MockAuthProviderProps) {
       };
       
       setUser(loggedInUser);
-      localStorage.setItem('mockAuthUser', JSON.stringify(loggedInUser));
+      if (isClient) {
+        localStorage.setItem('mockAuthUser', JSON.stringify(loggedInUser));
+      }
       
       console.log('✅ Login successful:', loggedInUser.email);
       
@@ -170,7 +183,9 @@ export function MockAuthProvider({ children }: MockAuthProviderProps) {
       MOCK_USERS.push(newUser);
       
       setUser(newUser);
-      localStorage.setItem('mockAuthUser', JSON.stringify(newUser));
+      if (isClient) {
+        localStorage.setItem('mockAuthUser', JSON.stringify(newUser));
+      }
       
       console.log('Mock sign up successful:', newUser.email);
       
@@ -190,7 +205,9 @@ export function MockAuthProvider({ children }: MockAuthProviderProps) {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       setUser(null);
-      localStorage.removeItem('mockAuthUser');
+      if (isClient) {
+        localStorage.removeItem('mockAuthUser');
+      }
       setError(null);
       
       console.log('Mock sign out successful');
