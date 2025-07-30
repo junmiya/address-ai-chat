@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2025-07-30T12:00:00.000Z" agent="Address AI Chat System" etag="architecture-v1.0" version="21.6.5">
+  <diagram name="System Architecture" id="system-architecture">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Title -->
+        <mxCell id="title" value="Address AI Chat - System Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="369" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Layer 1: Client Devices -->
+        <mxCell id="layer1-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;strokeWidth=2;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="50" y="70" width="1070" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="layer1-title" value="Layer 1: Client Devices" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="500" y="80" width="169" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="client-web" value="🌐 Web Browser&#xa;Chrome/Safari/Firefox&#xa;WebRTC Support" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;align=center;" vertex="1" parent="1">
+          <mxGeometry x="80" y="110" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="client-mobile" value="📱 Mobile Browser&#xa;iOS/Android Chrome&#xa;Touch Optimized" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;align=center;" vertex="1" parent="1">
+          <mxGeometry x="250" y="110" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="client-pwa" value="🔧 PWA Support&#xa;Service Worker&#xa;Offline Ready" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;align=center;" vertex="1" parent="1">
+          <mxGeometry x="420" y="110" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Layer 2: CDN & Edge -->
+        <mxCell id="layer2-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;strokeWidth=2;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="50" y="170" width="1070" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="layer2-title" value="Layer 2: CDN &amp; Edge Network" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="485" y="180" width="199" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="cdn-edge" value="🌍 Vercel Edge&#xa;Global Distribution&#xa;Auto Scaling" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;align=center;" vertex="1" parent="1">
+          <mxGeometry x="80" y="210" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="cdn-assets" value="📦 Static Assets&#xa;Images/CSS/JS&#xa;Cache Optimization" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;align=center;" vertex="1" parent="1">
+          <mxGeometry x="250" y="210" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="cdn-balancer" value="⚖️ Load Balancer&#xa;Geographic Routing&#xa;Failover Support" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;align=center;" vertex="1" parent="1">
+          <mxGeometry x="420" y="210" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Layer 3: Frontend Application -->
+        <mxCell id="layer3-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#388E3C;strokeWidth=2;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="50" y="270" width="1070" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="layer3-title" value="Layer 3: Frontend Application" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="485" y="280" width="199" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-nextjs" value="⚛️ Next.js 15&#xa;App Router&#xa;Turbopack" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#388E3C;align=center;" vertex="1" parent="1">
+          <mxGeometry x="80" y="310" width="120" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-react" value="🎨 React 19&#xa;Concurrent&#xa;Suspense" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#388E3C;align=center;" vertex="1" parent="1">
+          <mxGeometry x="220" y="310" width="120" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-typescript" value="📝 TypeScript&#xa;Strict Mode&#xa;Type Safety" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#388E3C;align=center;" vertex="1" parent="1">
+          <mxGeometry x="360" y="310" width="120" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-tailwind" value="💅 Tailwind CSS&#xa;Utility-First&#xa;Responsive" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#388E3C;align=center;" vertex="1" parent="1">
+          <mxGeometry x="500" y="310" width="120" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-zustand" value="🗃️ Zustand&#xa;State Management&#xa;Persistence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#388E3C;align=center;" vertex="1" parent="1">
+          <mxGeometry x="640" y="310" width="120" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Layer 4: Real-time Communication -->
+        <mxCell id="layer4-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#F57C00;strokeWidth=2;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="50" y="370" width="1070" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="layer4-title" value="Layer 4: Real-time Communication" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="470" y="380" width="229" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="rt-socketio" value="🔌 Socket.io Client&#xa;WebSocket + Fallback&#xa;Auto Reconnection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#F57C00;align=center;" vertex="1" parent="1">
+          <mxGeometry x="80" y="410" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="rt-webaudio" value="🎤 Web Audio API&#xa;MediaRecorder&#xa;Audio Processing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#F57C00;align=center;" vertex="1" parent="1">
+          <mxGeometry x="240" y="410" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="rt-speech" value="🗣️ Web Speech API&#xa;Japanese Recognition&#xa;Real-time Transcription" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#F57C00;align=center;" vertex="1" parent="1">
+          <mxGeometry x="400" y="410" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="rt-voice" value="📡 Voice Streaming&#xa;Base64 Compression&#xa;PTT Interface" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#F57C00;align=center;" vertex="1" parent="1">
+          <mxGeometry x="560" y="410" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Layer 5: Backend Services -->
+        <mxCell id="layer5-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#C2185B;strokeWidth=2;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="50" y="470" width="1070" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="layer5-title" value="Layer 5: Backend Services" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="490" y="480" width="189" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="be-socketserver" value="🔧 Socket.io Server&#xa;Vercel Functions&#xa;Event Broadcasting" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#C2185B;align=center;" vertex="1" parent="1">
+          <mxGeometry x="80" y="510" width="130" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="be-ai" value="🤖 AI Engine&#xa;SimpleAI + ButlerAI&#xa;NLP Processing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#C2185B;align=center;" vertex="1" parent="1">
+          <mxGeometry x="230" y="510" width="130" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="be-notification" value="📢 Notification&#xa;Web Push + Email&#xa;Multi-channel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#C2185B;align=center;" vertex="1" parent="1">
+          <mxGeometry x="380" y="510" width="130" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="be-emergency" value="🚨 Emergency Service&#xa;Priority Routing&#xa;Escalation Rules" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#C2185B;align=center;" vertex="1" parent="1">
+          <mxGeometry x="530" y="510" width="130" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="be-speech" value="🎙️ Speech Processing&#xa;Browser Native&#xa;Session Management" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#C2185B;align=center;" vertex="1" parent="1">
+          <mxGeometry x="680" y="510" width="130" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Layer 6: Data Storage -->
+        <mxCell id="layer6-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0288D1;strokeWidth=2;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="50" y="570" width="1070" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="layer6-title" value="Layer 6: Data Storage" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="510" y="580" width="149" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ds-supabase" value="🐘 Supabase PostgreSQL&#xa;Production Database&#xa;Real-time Subscriptions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0288D1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="80" y="610" width="150" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ds-auth" value="🔐 Supabase Auth&#xa;User Identity&#xa;JWT Management" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0288D1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="250" y="610" width="150" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ds-browser" value="💾 Browser Storage&#xa;localStorage/sessionStorage&#xa;Offline Cache" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0288D1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="420" y="610" width="150" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ds-conversation" value="📋 Conversation Records&#xa;AI Analysis Storage&#xa;Structured Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0288D1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="590" y="610" width="150" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Layer 7: External APIs -->
+        <mxCell id="layer7-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#D32F2F;strokeWidth=2;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="50" y="670" width="1070" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="layer7-title" value="Layer 7: External APIs" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="505" y="680" width="159" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ext-firebase" value="🔥 Firebase Auth&#xa;Mock Implementation&#xa;Development Ready" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#D32F2F;align=center;" vertex="1" parent="1">
+          <mxGeometry x="80" y="710" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ext-openai" value="🧠 OpenAI API&#xa;GPT-4o-mini&#xa;Production Ready" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#D32F2F;align=center;" vertex="1" parent="1">
+          <mxGeometry x="240" y="710" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ext-notification" value="🔔 Web Notification&#xa;Browser Native&#xa;Push Support" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#D32F2F;align=center;" vertex="1" parent="1">
+          <mxGeometry x="400" y="710" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ext-email" value="📧 Email Service&#xa;Notification Delivery&#xa;Emergency Alerts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#D32F2F;align=center;" vertex="1" parent="1">
+          <mxGeometry x="560" y="710" width="140" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Data Flow Arrows -->
+        <mxCell id="arrow1" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="150" y="150" as="sourcePoint" />
+            <mxPoint x="150" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="arrow2" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="150" y="250" as="sourcePoint" />
+            <mxPoint x="140" y="300" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="arrow3" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="140" y="350" as="sourcePoint" />
+            <mxPoint x="150" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="arrow4" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="150" y="450" as="sourcePoint" />
+            <mxPoint x="145" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="arrow5" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="145" y="550" as="sourcePoint" />
+            <mxPoint x="155" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="arrow6" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="295" y="550" as="sourcePoint" />
+            <mxPoint x="310" y="700" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Technology Stack Legend -->
+        <mxCell id="legend-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#dee2e6;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="850" y="110" width="250" height="200" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-title" value="🛠️ Technology Stack" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="900" y="120" width="150" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-content" value="Frontend: Next.js 15 + React 19&#xa;Language: TypeScript (Strict)&#xa;State: Zustand Store&#xa;Styling: Tailwind CSS&#xa;Real-time: Socket.io&#xa;Audio: Web Audio API&#xa;Speech: Web Speech API&#xa;AI: SimpleAI + ButlerAI&#xa;Database: Supabase PostgreSQL&#xa;Hosting: Vercel Edge&#xa;Status: ✅ All Phases Complete" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="860" y="145" width="230" height="155" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
