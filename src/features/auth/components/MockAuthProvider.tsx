@@ -26,9 +26,13 @@ const MOCK_USERS: User[] = [
     uid: 'mock-user-1',
     email: 'test1@example.com',
     displayName: '山田太郎',
+    name: '山田太郎',
+    community: '技術コミュニティ',
+    group: 'フロントエンド',
+    registeredAt: new Date('2024-01-01') as unknown as Timestamp,
     region: '東京都',
     organization: 'テスト株式会社',
-    ageGroup: 'age_30s',
+    ageGroup: '30s',
     gender: 'male',
     createdAt: new Date('2024-01-01') as unknown as Timestamp,
     lastLoginAt: new Date() as unknown as Timestamp,
@@ -37,9 +41,13 @@ const MOCK_USERS: User[] = [
     uid: 'mock-user-2',
     email: 'test2@example.com',
     displayName: '佐藤花子',
+    name: '佐藤花子',
+    community: 'デザインコミュニティ',
+    group: 'UI/UX',
+    registeredAt: new Date('2024-01-02') as unknown as Timestamp,
     region: '大阪府',
     organization: 'サンプル会社',
-    ageGroup: 'age_20s',
+    ageGroup: '20s',
     gender: 'female',
     createdAt: new Date('2024-01-02') as unknown as Timestamp,
     lastLoginAt: new Date() as unknown as Timestamp,
@@ -71,18 +79,35 @@ export function MockAuthProvider({ children }: MockAuthProviderProps) {
     setError(null);
 
     try {
+      console.log('=== LOGIN ATTEMPT ===');
+      console.log('Email:', email);
+      console.log('Password length:', password.length);
+      console.log('Password:', password);
+      console.log('Expected password: password123');
+      console.log('Available users:', MOCK_USERS.map(u => u.email));
+
       // 遅延を追加してリアルな認証体験を提供
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // パスワード検証（固定パスワード）
-      if (password !== 'password123') {
-        throw new Error('auth/wrong-password');
+      // 入力値のトリミング
+      const trimmedEmail = email.trim().toLowerCase();
+      const trimmedPassword = password.trim();
+      
+      console.log('Trimmed email:', trimmedEmail);
+      console.log('Trimmed password:', trimmedPassword);
+
+      // ユーザー検索（大文字小文字を区別しない）
+      const foundUser = MOCK_USERS.find(u => u.email.toLowerCase() === trimmedEmail);
+      if (!foundUser) {
+        console.error('User not found. Available emails:', MOCK_USERS.map(u => u.email));
+        throw new Error('auth/user-not-found');
       }
 
-      // ユーザー検索
-      const foundUser = MOCK_USERS.find(u => u.email === email);
-      if (!foundUser) {
-        throw new Error('auth/user-not-found');
+      // パスワード検証（複数の許可されたパスワード）
+      const validPasswords = ['password123', 'test123', '123456'];
+      if (!validPasswords.includes(trimmedPassword)) {
+        console.error('Invalid password. Valid passwords:', validPasswords);
+        throw new Error('auth/wrong-password');
       }
 
       // ログイン成功
@@ -94,9 +119,10 @@ export function MockAuthProvider({ children }: MockAuthProviderProps) {
       setUser(loggedInUser);
       localStorage.setItem('mockAuthUser', JSON.stringify(loggedInUser));
       
-      console.log('Mock sign in successful:', loggedInUser.email);
+      console.log('✅ Login successful:', loggedInUser.email);
       
     } catch (error) {
+      console.error('❌ Login failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'auth/unknown';
       setError(getMockErrorMessage(errorMessage));
       throw error;
@@ -128,6 +154,10 @@ export function MockAuthProvider({ children }: MockAuthProviderProps) {
         uid: `mock-user-${Date.now()}`,
         email: userData.email,
         displayName: userData.displayName || 'New User',
+        name: userData.displayName || 'New User',
+        community: '新規ユーザー',
+        group: '未分類',
+        registeredAt: new Date() as unknown as Timestamp,
         region: userData.region,
         organization: userData.organization,
         ageGroup: userData.ageGroup,

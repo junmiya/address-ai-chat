@@ -12,12 +12,12 @@ interface RegisterFormProps {
 }
 
 const ageOptions = [
-  { value: 'age_10s', label: '10代' },
-  { value: 'age_20s', label: '20代' },
-  { value: 'age_30s', label: '30代' },
-  { value: 'age_40s', label: '40代' },
-  { value: 'age_50s', label: '50代' },
-  { value: 'age_60s_plus', label: '60代以上' },
+  { value: '10s', label: '10代' },
+  { value: '20s', label: '20代' },
+  { value: '30s', label: '30代' },
+  { value: '40s', label: '40代' },
+  { value: '50s', label: '50代' },
+  { value: '60s+', label: '60代以上' },
 ];
 
 const genderOptions = [

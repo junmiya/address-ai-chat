@@ -10,12 +10,13 @@ import {
   RoomListItem,
   ModerationAction
 } from '@/types';
-import { socketService } from '@/lib/socket';
+import { socketService } from '@/lib/socket/socketService';
 import { Timestamp } from 'firebase/firestore';
 
 interface ChatActions {
   // Room Management
   createRoom: (roomData: CreateRoomData, userId: string) => Promise<Room>;
+  createChatWithUser: (targetUserUid: string, initiatorUid: string, chatType: '1v1' | '1vN') => Promise<Room>;
   joinRoom: (roomId: string) => Promise<void>;
   joinPublicRoom: (roomId: string, userId: string) => Promise<void>;
   leaveRoom: () => void;
@@ -36,10 +37,15 @@ interface ChatActions {
   startTyping: (roomId: string, userId: string) => void;
   stopTyping: (roomId: string, userId: string) => void;
   
-  // Connection Management
-  connectSocket: (userId: string) => Promise<void>;
+  // Socket.io Connection Management
+  connectSocket: (user: User) => Promise<void>;
   disconnectSocket: () => void;
   setConnectionStatus: (isConnected: boolean) => void;
+  
+  // Socket.io Real-time features
+  setupSocketListeners: () => void;
+  cleanupSocketListeners: () => void;
+  sendSocketMessage: (roomId: string, content: string) => void;
   
   // State Management
   setCurrentRoom: (room: Room | null) => void;
@@ -50,6 +56,12 @@ interface ChatActions {
   // Room List Management
   loadRoomList: (userId: string) => Promise<RoomListItem[]>;
   refreshRoomList: (userId: string) => Promise<RoomListItem[]>;
+  
+  // Read Status Management
+  markMessageAsRead: (messageId: string, roomId: string) => void;
+  markAllMessagesAsRead: (roomId: string) => void;
+  updateMessageReadStatus: (messageId: string, userId: string) => void;
+  updateMultipleMessagesReadStatus: (messageIds: string[], userId: string) => void;
   
   // Moderation Actions
   updateRoomNotice: (roomId: string, notice: string, userId: string) => Promise<void>;
@@ -218,6 +230,9 @@ const MOCK_MODERATION_ACTIONS: ModerationAction[] = [];
 let MOCK_ROOMS = getStoredRooms();
 let MOCK_MESSAGES = getStoredMessages();
 
+// Socket.io クリーンアップ関数
+let socketCleanupFunction: (() => void) | null = null;
+
 export const useChatStore = create<ChatStore>((set, get) => ({
   // Initial State
   currentRoom: null,
@@ -225,8 +240,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   participants: [],
   typingUsers: [],
   isConnected: false,
+  isSocketConnected: false,
   isLoading: false,
   error: null,
+  socketError: null,
+  realtimeMessages: [],
 
   // Room Management
   createRoom: async (roomData: CreateRoomData, userId: string) => {
@@ -268,6 +286,88 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     } catch (error) {
       console.error('Failed to create room:', error);
       setError(error instanceof Error ? error.message : 'ルーム作成に失敗しました');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  },
+
+  createChatWithUser: async (targetUserUid: string, initiatorUid: string, chatType: '1v1' | '1vN') => {
+    const { setLoading, setError } = get();
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // 既存のルームをチェック（1対1の場合）
+      if (chatType === '1v1') {
+        const existingRoom = MOCK_ROOMS.find(room => 
+          room.chatType === '1v1' &&
+          room.participants.includes(targetUserUid) &&
+          room.participants.includes(initiatorUid) &&
+          room.participants.length === 2
+        );
+        
+        if (existingRoom) {
+          console.log('Existing 1v1 room found:', existingRoom.roomId);
+          return existingRoom;
+        }
+      }
+      
+      // ターゲットユーザーの名前を取得（DirectoryStoreから）
+      let targetUserName = targetUserUid;
+      try {
+        const { useDirectoryStore } = await import('@/features/directory/store/directoryStore');
+        const { users } = useDirectoryStore.getState();
+        const targetUser = users.find(u => u.uid === targetUserUid);
+        if (targetUser) {
+          targetUserName = targetUser.name;
+        }
+      } catch (error) {
+        console.warn('Failed to get target user name:', error);
+      }
+      
+      // 新しいルームを作成
+      const roomTitle = chatType === '1v1' 
+        ? `${targetUserName}との個人チャット`
+        : `${targetUserName}のグループチャット`;
+      
+      const newRoom: Room = {
+        roomId: uuidv4(),
+        ownerUid: targetUserUid, // 選択されたユーザーがオーナー
+        title: roomTitle,
+        visibility: 'private', // ディレクトリからは常にprivate
+        chatType: chatType,
+        participants: [targetUserUid, initiatorUid],
+        aiProxyEnabled: false, // デフォルトはOFF（オーナーが設定）
+        aiProxyConfig: {
+          timeoutSecs: 30,
+          keywords: [],
+          model: 'gpt-4o',
+        },
+        createdAt: new Date() as unknown as Timestamp,
+        isActive: true,
+        isClosed: false,
+      };
+      
+      // モックデータに追加
+      MOCK_ROOMS.push(newRoom);
+      
+      // localStorageに保存
+      saveRoomsToStorage(MOCK_ROOMS);
+      
+      console.log('Chat created with user:', {
+        targetUser: targetUserUid,
+        initiator: initiatorUid,
+        chatType: chatType,
+        roomId: newRoom.roomId,
+      });
+      
+      return newRoom;
+      
+    } catch (error) {
+      console.error('Failed to create chat with user:', error);
+      setError(error instanceof Error ? error.message : 'チャット作成に失敗しました');
       throw error;
     } finally {
       setLoading(false);
@@ -434,30 +534,23 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       
       // Socket.ioでメッセージ送信
       if (socketService.isConnected()) {
-        socketService.sendMessage({
-          roomId: messageData.roomId,
-          senderUid: messageData.senderUid,
-          text: messageData.text,
-        });
+        socketService.sendMessage(messageData.roomId, messageData.text, 'text');
         
-        // モックモードの場合は即座にローカル状態を更新
-        if (socketService.isMockMode()) {
-          const updatedMessages = [...messages, newMessage];
-          set({ messages: updatedMessages });
-          console.log('[Mock Mode] Message added to local state:', newMessage.msgId, 'Total messages:', updatedMessages.length);
-          
-          // モックデータも更新
-          if (!MOCK_MESSAGES[messageData.roomId]) {
-            MOCK_MESSAGES[messageData.roomId] = [];
-          }
-          MOCK_MESSAGES[messageData.roomId].push(newMessage);
-          
-          // localStorageに保存
-          saveMessagesToStorage(MOCK_MESSAGES);
-          
-          console.log('[Mock Mode] Message added to MOCK_MESSAGES:', MOCK_MESSAGES[messageData.roomId].length, 'messages');
+        // Socket.ioメッセージング：即座にローカル状態を更新
+        const updatedMessages = [...messages, newMessage];
+        set({ messages: updatedMessages });
+        console.log('Message added to local state:', newMessage.msgId, 'Total messages:', updatedMessages.length);
+        
+        // モックデータも更新
+        if (!MOCK_MESSAGES[messageData.roomId]) {
+          MOCK_MESSAGES[messageData.roomId] = [];
         }
-        // 実モードでは、message_receivedイベントで状態更新されるため、ここでは何もしない
+        MOCK_MESSAGES[messageData.roomId].push(newMessage);
+        
+        // localStorageに保存
+        saveMessagesToStorage(MOCK_MESSAGES);
+        
+        console.log('Message added to MOCK_MESSAGES:', MOCK_MESSAGES[messageData.roomId].length, 'messages');
       } else {
         // Socket.io接続がない場合のみローカル状態を更新
         const updatedMessages = [...messages, newMessage];
@@ -525,9 +618,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           uid: 'mock-user-1',
           email: 'test1@example.com',
           displayName: '山田太郎',
+          name: '山田太郎',
+          community: '技術コミュニティ',
+          group: 'フロントエンド',
+          registeredAt: new Date('2024-01-01') as unknown as Timestamp,
           region: '東京都',
           organization: 'テスト株式会社',
-          ageGroup: 'age_30s',
+          ageGroup: '30s',
           gender: 'male',
           createdAt: new Date('2024-01-01') as unknown as Timestamp,
           lastLoginAt: new Date() as unknown as Timestamp,
@@ -536,9 +633,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           uid: 'mock-user-2',
           email: 'test2@example.com',
           displayName: '佐藤花子',
+          name: '佐藤花子',
+          community: 'デザインコミュニティ',
+          group: 'UI/UX',
+          registeredAt: new Date('2024-01-02') as unknown as Timestamp,
           region: '大阪府',
           organization: 'サンプル会社',
-          ageGroup: 'age_20s',
+          ageGroup: '20s',
           gender: 'female',
           createdAt: new Date('2024-01-02') as unknown as Timestamp,
           lastLoginAt: new Date() as unknown as Timestamp,
@@ -578,66 +679,72 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
-  startTyping: (roomId: string, userId: string) => {
+  startTyping: (roomId: string, _userId: string) => {
     if (socketService.isConnected()) {
-      socketService.startTyping(roomId, userId);
+      socketService.startTyping(roomId);
     }
   },
 
-  stopTyping: (roomId: string, userId: string) => {
+  stopTyping: (roomId: string, _userId: string) => {
     if (socketService.isConnected()) {
-      socketService.stopTyping(roomId, userId);
+      socketService.stopTyping(roomId);
     }
   },
 
   // Connection Management
-  connectSocket: async (userId: string) => {
-    const { setConnectionStatus, setError, isConnected } = get();
+  connectSocket: async (user: User) => {
+    const { setConnectionStatus, setError, isSocketConnected, setupSocketListeners } = get();
     
     // 既に接続済みの場合は何もしない
-    if (isConnected) {
+    if (isSocketConnected) {
       console.log('Socket already connected');
       return;
     }
     
     try {
       setError(null);
-      await socketService.connect(userId);
+      set({ socketError: null });
+      
+      console.log('Attempting to connect socket for user:', user.uid);
+      
+      // Socket.io接続（タイムアウト付き）
+      await socketService.connect(user);
       setConnectionStatus(true);
+      set({ isSocketConnected: true });
       
-      // モックモードでない場合のみイベントリスナーを設定
-      if (!socketService.isMockMode()) {
-        // Socket.ioイベントリスナーを設定
-        socketService.on('message_received', (message: Message) => {
-          const { messages } = get();
-          set({ messages: [...messages, message] });
-        });
-        
-        socketService.on('user_joined', (_roomId: string, user: User) => {
-          get().addParticipant(user);
-        });
-        
-        socketService.on('user_left', (_roomId: string, userId: string) => {
-          get().removeParticipant(userId);
-        });
-        
-        socketService.on('typing_status', (_roomId: string, userId: string, isTyping: boolean) => {
-          get().setTyping(userId, isTyping);
-        });
-      }
+      console.log('Socket connection successful');
       
-      console.log('Socket connected successfully', socketService.isMockMode() ? '(Mock Mode)' : '');
+      // イベントリスナーを設定
+      setupSocketListeners();
+      
+      console.log('Socket connected successfully for user:', user.uid);
       
     } catch (error) {
       console.error('Failed to connect socket:', error);
-      setError(error instanceof Error ? error.message : 'Socket接続に失敗しました');
+      const errorMessage = error instanceof Error ? error.message : 'Socket接続に失敗しました';
+      setError(errorMessage);
+      set({ socketError: errorMessage });
       setConnectionStatus(false);
+      set({ isSocketConnected: false });
     }
   },
 
   disconnectSocket: () => {
+    const { cleanupSocketListeners } = get();
+    
+    // イベントリスナーをクリーンアップ
+    cleanupSocketListeners();
+    
+    // Socket.io切断
     socketService.disconnect();
-    set({ isConnected: false });
+    
+    // 状態をリセット
+    set({ 
+      isConnected: false,
+      isSocketConnected: false,
+      socketError: null,
+      realtimeMessages: []
+    });
   },
 
   setConnectionStatus: (isConnected: boolean) => {
@@ -765,10 +872,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         // localStorageに保存
         saveRoomsToStorage(MOCK_ROOMS);
         
-        // Socket.ioでユーザー退出を通知
-        if (socketService.isConnected()) {
-          socketService.emit('kick_user', { roomId, targetUserId, reason });
-        }
+        // Socket.ioでユーザー退出を通知（将来実装）
+        // if (socketService.isConnected()) {
+        //   socketService.emit('kick_user', { roomId, targetUserId, reason });
+        // }
         
         // ローカル状態から削除
         removeParticipant(targetUserId);
@@ -808,10 +915,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         // localStorageに保存
         saveRoomsToStorage(MOCK_ROOMS);
         
-        // Socket.ioでルーム閉鎖を通知
-        if (socketService.isConnected()) {
-          socketService.emit('close_room', { roomId, reason });
-        }
+        // Socket.ioでルーム閉鎖を通知（将来実装）
+        // if (socketService.isConnected()) {
+        //   socketService.emit('close_room', { roomId, reason });
+        // }
         
         // 現在のルームが対象ルームの場合、状態を更新
         if (currentRoom?.roomId === roomId) {
@@ -852,10 +959,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         // localStorageに保存
         saveRoomsToStorage(MOCK_ROOMS);
         
-        // Socket.ioでルーム再開を通知
-        if (socketService.isConnected()) {
-          socketService.emit('reopen_room', { roomId });
-        }
+        // Socket.ioでルーム再開を通知（将来実装）
+        // if (socketService.isConnected()) {
+        //   socketService.emit('reopen_room', { roomId });
+        // }
         
         // 現在のルームが対象ルームの場合、状態を更新
         if (currentRoom?.roomId === roomId) {
@@ -899,10 +1006,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         saveMessagesToStorage(MOCK_MESSAGES);
       }
       
-      // Socket.ioでメッセージクリアを通知
-      if (socketService.isConnected()) {
-        socketService.emit('clear_messages', { roomId });
-      }
+      // Socket.ioでメッセージクリアを通知（将来実装）
+      // if (socketService.isConnected()) {
+      //   socketService.emit('clear_messages', { roomId });
+      // }
       
       // ローカル状態からメッセージを削除
       const updatedMessages = messages.map(message => 
@@ -928,5 +1035,199 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       setError(error instanceof Error ? error.message : 'メッセージの削除に失敗しました');
       throw error;
     }
+  },
+
+  // Socket.io Real-time features
+  setupSocketListeners: () => {
+    let messageUnsubscribe: (() => void) | null = null;
+    let typingUnsubscribe: (() => void) | null = null;
+    let userJoinedUnsubscribe: (() => void) | null = null;
+    let userLeftUnsubscribe: (() => void) | null = null;
+    let connectionUnsubscribe: (() => void) | null = null;
+    let errorUnsubscribe: (() => void) | null = null;
+    let messageReadUnsubscribe: (() => void) | null = null;
+    let messagesReadUnsubscribe: (() => void) | null = null;
+
+    try {
+      // メッセージ受信
+      messageUnsubscribe = socketService.onMessage((socketMessage) => {
+        const { realtimeMessages } = get();
+        
+        // SocketMessage を Message に変換
+        const message: Message = {
+          msgId: socketMessage.id,
+          roomId: socketMessage.roomId,
+          senderUid: socketMessage.senderId,
+          text: socketMessage.content,
+          createdAt: socketMessage.timestamp as unknown as Timestamp,
+          isDeleted: false,
+          isAiGenerated: false,
+        };
+        
+        // リアルタイムメッセージリストに追加
+        set({ realtimeMessages: [...realtimeMessages, message] });
+        
+        // メインのメッセージリストにも追加
+        const { messages } = get();
+        set({ messages: [...messages, message] });
+      });
+
+      // タイピング状態
+      typingUnsubscribe = socketService.onTyping((data) => {
+        const { typingUsers } = get();
+        
+        if (data.isTyping) {
+          if (!typingUsers.includes(data.userId)) {
+            set({ typingUsers: [...typingUsers, data.userId] });
+          }
+        } else {
+          set({ typingUsers: typingUsers.filter(uid => uid !== data.userId) });
+        }
+      });
+
+      // ユーザー参加
+      userJoinedUnsubscribe = socketService.onUserJoined((data) => {
+        console.log('User joined:', data.userId, 'at', data.timestamp);
+        // 必要に応じて参加者リストを更新
+      });
+
+      // ユーザー退出
+      userLeftUnsubscribe = socketService.onUserLeft((data) => {
+        console.log('User left:', data.userId, 'at', data.timestamp);
+        // 必要に応じて参加者リストから削除
+      });
+
+      // 接続状態変更
+      connectionUnsubscribe = socketService.onConnectionChange((connected) => {
+        set({ isSocketConnected: connected });
+        
+        if (!connected) {
+          set({ socketError: 'Socket接続が切断されました' });
+        } else {
+          set({ socketError: null });
+        }
+      });
+
+      // エラー
+      errorUnsubscribe = socketService.onError((error) => {
+        set({ socketError: error });
+        console.error('Socket error:', error);
+      });
+
+      // 既読状態の更新
+      messageReadUnsubscribe = socketService.onMessageRead((data) => {
+        const { updateMessageReadStatus } = get();
+        updateMessageReadStatus(data.messageId, data.userId);
+      });
+
+      messagesReadUnsubscribe = socketService.onMessagesRead((data) => {
+        const { updateMultipleMessagesReadStatus } = get();
+        updateMultipleMessagesReadStatus(data.messageIds, data.userId);
+      });
+
+      // クリーンアップ関数を保存
+      socketCleanupFunction = () => {
+        messageUnsubscribe?.();
+        typingUnsubscribe?.();
+        userJoinedUnsubscribe?.();
+        userLeftUnsubscribe?.();
+        connectionUnsubscribe?.();
+        errorUnsubscribe?.();
+        messageReadUnsubscribe?.();
+        messagesReadUnsubscribe?.();
+      };
+
+    } catch (error) {
+      console.error('Failed to setup socket listeners:', error);
+      set({ socketError: 'Socket.ioリスナーの設定に失敗しました' });
+    }
+  },
+
+  cleanupSocketListeners: () => {
+    if (socketCleanupFunction) {
+      socketCleanupFunction();
+      socketCleanupFunction = null;
+    }
+  },
+
+  sendSocketMessage: (roomId: string, content: string) => {
+    try {
+      if (!socketService.isConnected()) {
+        throw new Error('Socket not connected');
+      }
+      
+      socketService.sendMessage(roomId, content, 'text');
+    } catch (error) {
+      console.error('Failed to send socket message:', error);
+      set({ socketError: error instanceof Error ? error.message : 'メッセージ送信に失敗しました' });
+      throw error;
+    }
+  },
+
+  // Read Status Management
+  markMessageAsRead: (messageId: string, roomId: string) => {
+    try {
+      if (!socketService.isConnected()) {
+        console.warn('Socket not connected, cannot mark message as read');
+        return;
+      }
+      
+      socketService.markMessageAsRead(messageId, roomId);
+    } catch (error) {
+      console.error('Failed to mark message as read:', error);
+    }
+  },
+
+  markAllMessagesAsRead: (roomId: string) => {
+    try {
+      if (!socketService.isConnected()) {
+        console.warn('Socket not connected, cannot mark all messages as read');
+        return;
+      }
+      
+      socketService.markAllMessagesAsRead(roomId);
+    } catch (error) {
+      console.error('Failed to mark all messages as read:', error);
+    }
+  },
+
+  updateMessageReadStatus: (messageId: string, userId: string) => {
+    const { messages } = get();
+    
+    // メッセージの既読状態を更新
+    const updatedMessages = messages.map(message => {
+      if (message.msgId === messageId) {
+        const readBy = message.readBy || [];
+        if (!readBy.includes(userId)) {
+          return {
+            ...message,
+            readBy: [...readBy, userId]
+          };
+        }
+      }
+      return message;
+    });
+    
+    set({ messages: updatedMessages });
+  },
+
+  updateMultipleMessagesReadStatus: (messageIds: string[], userId: string) => {
+    const { messages } = get();
+    
+    // 複数メッセージの既読状態を一括更新
+    const updatedMessages = messages.map(message => {
+      if (messageIds.includes(message.msgId)) {
+        const readBy = message.readBy || [];
+        if (!readBy.includes(userId)) {
+          return {
+            ...message,
+            readBy: [...readBy, userId]
+          };
+        }
+      }
+      return message;
+    });
+    
+    set({ messages: updatedMessages });
   },
 }));

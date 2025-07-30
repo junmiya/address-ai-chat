@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Message, User } from '@/types';
 import { useMockAuth } from '@/features/auth/components/MockAuthProvider';
+import { FileMessage } from './FileMessage';
 
 interface MessageListProps {
   messages: Message[];
@@ -166,9 +167,33 @@ export const MessageList: React.FC<MessageListProps> = ({
                       : ''
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap break-words">
-                    {message.text}
-                  </p>
+                  {/* メッセージコンテンツ（テキスト/ファイル/画像） */}
+                  {(() => {
+                    // JSONとしてパースを試行（ファイル/画像メッセージの場合）
+                    try {
+                      const fileData = JSON.parse(message.text);
+                      if (fileData.url && fileData.filename) {
+                        // ファイルまたは画像メッセージ
+                        const messageType = fileData.type?.startsWith('image/') ? 'image' : 'file';
+                        return (
+                          <FileMessage 
+                            fileData={fileData} 
+                            type={messageType}
+                            isOwn={isCurrentUser}
+                          />
+                        );
+                      }
+                    } catch (e) {
+                      // JSONパースに失敗した場合は通常のテキストメッセージ
+                    }
+                    
+                    // 通常のテキストメッセージ
+                    return (
+                      <p className="text-sm whitespace-pre-wrap break-words">
+                        {message.text}
+                      </p>
+                    );
+                  })()}
                   
                   {/* 時刻 */}
                   <div className={`mt-1 text-xs ${

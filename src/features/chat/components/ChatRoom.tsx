@@ -7,7 +7,7 @@ import { useChatStore } from '../store/chatStore';
 import { useMockAuth } from '@/features/auth/components/MockAuthProvider';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
-import { socketService } from '@/lib/socket';
+import { socketService } from '@/lib/socket/socketService';
 import { RoomSettingsModal } from './moderation';
 import { 
   canAccessRoomSettings, 
@@ -15,6 +15,17 @@ import {
   canLeaveRoom
 } from '../utils/permissions';
 import { useToast, ToastContainer } from './shared/Toast';
+import { EmergencyButton } from '@/features/emergency/components/EmergencyButton';
+import { CallStatusDisplay } from '@/features/emergency/components/CallStatusDisplay';
+import { StatusToggle } from '@/features/owner-status/components/StatusToggle';
+import { useOwnerStatusStore } from '@/features/owner-status/store/statusStore';
+import { emergencyCallService } from '@/lib/emergency/emergencyService';
+import { defaultAIEngine } from '@/lib/ai/simpleAI';
+import { EmergencyCall } from '@/types';
+import { SimpleTransceiver } from '@/features/voice-transceiver/components/SimpleTransceiver';
+import { LiveConversation } from '@/features/ai-butler/components/LiveConversation';
+import { OwnerNotificationPanel } from '@/features/ai-butler/components/OwnerNotificationPanel';
+import { OwnerNotification } from '@/lib/ai/butlerAI';
 
 interface ChatRoomProps {
   room: Room;
@@ -45,10 +56,28 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
     clearAllMessages,
   } = useChatStore();
 
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(typeof window !== 'undefined' ? navigator.onLine : true);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   
+  // 新機能の状態管理
+  const [activeEmergencyCall, setActiveEmergencyCall] = useState<EmergencyCall | null>(null);
+  const [showOwnerSettings, setShowOwnerSettings] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [butlerEnabled, setButlerEnabled] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [ownerNotifications, setOwnerNotifications] = useState<OwnerNotification[]>([]);
+  
   const { toasts, hideToast, showSuccess, showError, showWarning } = useToast();
+  
+  // オーナーステータス管理
+  const {
+    getOwnerStatus,
+    updateOwnerStatus,
+    getAIProxySettings,
+    updateAIProxySettings,
+    updateLastActivity,
+    loadFromStorage: loadOwnerStatus
+  } = useOwnerStatusStore();
 
   // オンライン状態の監視
   useEffect(() => {
@@ -64,21 +93,86 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
     };
   }, []);
 
-  // Socket.io接続の初期化
+  // 初期化
+  useEffect(() => {
+    loadOwnerStatus();
+    
+    // 緊急呼び出し状況をチェック
+    const activeCall = emergencyCallService.getActiveCall(room.roomId);
+    setActiveEmergencyCall(activeCall);
+  }, [room.roomId, loadOwnerStatus]);
+
+  // Socket.io接続の初期化（エラーを無視）
   useEffect(() => {
     if (user && isOnline && !isConnected) {
-      connectSocket(user.uid).catch(console.error);
+      connectSocket(user).catch((error) => {
+        console.warn('Socket.io connection failed, but continuing with basic chat functionality:', error);
+        // Socket.io接続エラーは無視して基本的なチャット機能を利用
+      });
     }
   }, [user, isOnline, isConnected, connectSocket]);
+
+  // オーナーの場合、最終アクティビティを更新
+  useEffect(() => {
+    if (user && user.uid === room.ownerUid) {
+      updateLastActivity(room.roomId, user.uid);
+    }
+  }, [user, room, updateLastActivity]);
 
   // メッセージ送信
   const handleSendMessage = async (messageData: MessageInputData) => {
     if (!user || !canSendMessage(user, room)) {
       console.warn('Permission denied: cannot send message');
-      // エラーは親コンポーネントで適切に処理される
       return;
     }
+    
+    // 通常のメッセージ送信
     await sendMessage(messageData);
+    
+    // オーナーの最終アクティビティを更新
+    if (user.uid === room.ownerUid) {
+      updateLastActivity(room.roomId, user.uid);
+    }
+    
+    // AI応答をチェック
+    if (user.uid !== room.ownerUid) {
+      await handleAIResponse(messageData.text, user);
+    }
+  };
+
+  // AI応答処理
+  const handleAIResponse = async (message: string, sender: User) => {
+    try {
+      const ownerStatus = getOwnerStatus(room.roomId);
+      const aiSettings = getAIProxySettings(room.roomId);
+      
+      // ルームにオーナーステータスとAI設定を統合
+      const enhancedRoom = {
+        ...room,
+        ownerStatus,
+        aiProxySettings: aiSettings
+      };
+      
+      const aiResponse = await defaultAIEngine.processMessage(message, enhancedRoom, sender);
+      
+      if (aiResponse) {
+        // AIメッセージを送信
+        const aiMessageData: MessageInputData = {
+          text: aiResponse.content,
+          roomId: room.roomId,
+          senderUid: 'AI'
+        };
+        
+        await sendMessage(aiMessageData);
+        
+        // 緊急通知が必要な場合
+        if (aiResponse.shouldNotifyOwner && aiResponse.isEmergency) {
+          showWarning('緊急メッセージが検知されました', 'オーナーに通知を送信しています');
+        }
+      }
+    } catch (error) {
+      console.error('AI response error:', error);
+    }
   };
 
   // タイピング開始
@@ -169,6 +263,76 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
     }
   };
 
+  // オーナーステータス変更
+  const handleOwnerStatusChange = (status: 'online' | 'away' | 'busy' | 'emergency_only', message?: string) => {
+    if (!user || user.uid !== room.ownerUid) return;
+    
+    updateOwnerStatus(room.roomId, status, message);
+    showSuccess(`ステータスを「${status}」に変更しました`);
+  };
+
+  // 緊急呼び出し処理
+  const handleEmergencyCall = (emergencyCall: EmergencyCall) => {
+    setActiveEmergencyCall(emergencyCall);
+    showWarning('緊急呼び出しが作成されました', 'オーナーに通知を送信しています');
+  };
+
+  // 緊急呼び出し応答
+  const handleEmergencyResponse = async (response: 'answered' | 'ignored', ownerResponse?: string) => {
+    if (!activeEmergencyCall) return;
+    
+    const success = await emergencyCallService.respondToCall(
+      activeEmergencyCall.id,
+      response,
+      ownerResponse
+    );
+    
+    if (success) {
+      setActiveEmergencyCall(null);
+      if (response === 'answered') {
+        showSuccess('緊急呼び出しに応答しました');
+      } else {
+        showWarning('緊急呼び出しを無視しました');
+      }
+    }
+  };
+
+  // AI執事からの通知処理
+  const handleButlerNotification = (notification: OwnerNotification) => {
+    setOwnerNotifications(prev => [notification, ...prev]);
+    
+    // 緊急度に応じた通知
+    if (notification.urgency === 'emergency') {
+      showError('緊急通知', `${notification.guestInfo.name}さんから緊急の問い合わせがあります`);
+    } else if (notification.urgency === 'high') {
+      showWarning('重要通知', `${notification.guestInfo.name}さんから問い合わせがあります`);
+    } else {
+      showSuccess('新しい問い合わせ', `${notification.guestInfo.name}さんから問い合わせがあります`);
+    }
+  };
+
+  // 通知の既読処理
+  const handleMarkNotificationAsRead = (notificationId: string) => {
+    setOwnerNotifications(prev => 
+      prev.filter(n => n.conversationId !== notificationId)
+    );
+    showSuccess('通知を既読にしました');
+  };
+
+  // 通知への返信処理
+  const handleRespondToNotification = (notificationId: string, response: string) => {
+    // 実際の返信処理を実装（メール送信、チャット投稿など）
+    console.log(`Responding to ${notificationId}:`, response);
+    showSuccess('返信を送信しました');
+  };
+
+  // 通知の削除処理
+  const handleDismissNotification = (notificationId: string) => {
+    setOwnerNotifications(prev => 
+      prev.filter(n => n.conversationId !== notificationId)
+    );
+  };
+
   // 参加者情報の表示
   const getParticipantsList = () => {
     return participants.map(p => p.displayName).join(', ');
@@ -222,6 +386,26 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
                     AI代理応答
                   </span>
                 )}
+                
+                {/* オーナーステータス表示 */}
+                {(() => {
+                  const ownerStatus = getOwnerStatus(room.roomId);
+                  if (!ownerStatus) return null;
+                  
+                  const statusConfig = {
+                    online: { label: '🟢 オンライン', color: 'bg-green-100 text-green-800' },
+                    away: { label: '🟡 離席中', color: 'bg-yellow-100 text-yellow-800' },
+                    busy: { label: '🔴 取り込み中', color: 'bg-red-100 text-red-800' },
+                    emergency_only: { label: '⚠️ 緊急時のみ', color: 'bg-purple-100 text-purple-800' }
+                  };
+                  
+                  const config = statusConfig[ownerStatus.status];
+                  return (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+                      {config.label}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
             
@@ -253,11 +437,62 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
               }`}></div>
               <span className="text-xs text-gray-600">
                 {isConnected && isOnline 
-                  ? (socketService.isMockMode() ? 'モック接続中' : '接続中')
+                  ? '接続中'
                   : 'オフライン'
                 }
               </span>
             </div>
+            
+            {/* 音声機能トグルボタン */}
+            <Button
+              variant={voiceEnabled ? "default" : "outline"}
+              size="sm"
+              onClick={() => setVoiceEnabled(!voiceEnabled)}
+              className="text-xs"
+            >
+              {voiceEnabled ? '🎤 音声ON' : '🎙️ 音声OFF'}
+            </Button>
+
+            {/* AI執事機能トグルボタン（ゲストのみ） */}
+            {user && user.uid !== room.ownerUid && (
+              <Button
+                variant={butlerEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => setButlerEnabled(!butlerEnabled)}
+                className="text-xs"
+              >
+                {butlerEnabled ? '🤖 執事ON' : '🤖 執事OFF'}
+              </Button>
+            )}
+
+            {/* 通知パネルボタン（オーナーのみ） */}
+            {user && user.uid === room.ownerUid && (
+              <Button
+                variant={showNotifications ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="text-xs relative"
+              >
+                📋 通知
+                {ownerNotifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {ownerNotifications.length}
+                  </span>
+                )}
+              </Button>
+            )}
+            
+            {/* オーナー用ステータス設定ボタン */}
+            {user && user.uid === room.ownerUid && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowOwnerSettings(!showOwnerSettings)}
+                className="text-xs"
+              >
+                📊 ステータス
+              </Button>
+            )}
             
             {/* 設定ボタン（ルームオーナーのみ） */}
             {user && canAccessRoomSettings(user, room) && (
@@ -329,6 +564,77 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
               このルームは閉鎖されています。新しいメッセージを送信することはできません。
             </span>
           </div>
+        </div>
+      )}
+
+      {/* オーナーステータス設定パネル */}
+      {showOwnerSettings && user && user.uid === room.ownerUid && (
+        <div className="border-t border-gray-200 p-4 bg-gray-50">
+          <StatusToggle
+            currentStatus={getOwnerStatus(room.roomId)}
+            onStatusChange={handleOwnerStatusChange}
+            disabled={false}
+          />
+        </div>
+      )}
+
+      {/* 緊急呼び出し状況表示 */}
+      {activeEmergencyCall && (
+        <div className="border-t border-gray-200 p-4 bg-orange-50">
+          <CallStatusDisplay
+            emergencyCall={activeEmergencyCall}
+            isOwner={user?.uid === room.ownerUid}
+            onRespond={handleEmergencyResponse}
+          />
+        </div>
+      )}
+
+      {/* 音声トランシーバー */}
+      {voiceEnabled && (
+        <div className="border-t border-gray-200 p-4">
+          <SimpleTransceiver 
+            roomId={room.roomId} 
+            className="mb-4"
+          />
+        </div>
+      )}
+
+      {/* AI執事との会話（ゲストのみ） */}
+      {butlerEnabled && user && user.uid !== room.ownerUid && (
+        <div className="border-t border-gray-200">
+          <LiveConversation
+            room={room}
+            user={user}
+            onComplete={handleButlerNotification}
+            onError={(error) => showError('AI執事エラー', error.message)}
+            className="h-96"
+          />
+        </div>
+      )}
+
+      {/* オーナー通知パネル（オーナーのみ） */}
+      {showNotifications && user && user.uid === room.ownerUid && (
+        <div className="border-t border-gray-200">
+          <OwnerNotificationPanel
+            notifications={ownerNotifications}
+            onMarkAsRead={handleMarkNotificationAsRead}
+            onRespond={handleRespondToNotification}
+            onDismiss={handleDismissNotification}
+            className="h-96"
+          />
+        </div>
+      )}
+
+      {/* 緊急ボタン（入室者向け） */}
+      {user && user.uid !== room.ownerUid && !activeEmergencyCall && (
+        <div className="border-t border-gray-200 p-4">
+          <EmergencyButton
+            room={room}
+            currentUser={user}
+            onEmergencyCall={handleEmergencyCall}
+            disabled={!isConnected || !isOnline}
+            activeCall={activeEmergencyCall}
+          />
         </div>
       )}
 

@@ -1,16 +1,49 @@
 import { Timestamp } from 'firebase/firestore';
 
-// User Types
+// User Types  
 export interface User {
   uid: string;
   email: string;
   displayName: string;
+  name: string; // ディレクトリ表示用の名前
+  community: string; // コミュニティ（第1階層）
+  group: string; // グループ（第2階層）
+  registeredAt: Timestamp; // 登録日時
   region?: string | undefined;
   organization?: string | undefined;
-  ageGroup?: 'age_10s' | 'age_20s' | 'age_30s' | 'age_40s' | 'age_50s' | 'age_60s_plus' | undefined;
+  ageGroup?: '10s' | '20s' | '30s' | '40s' | '50s' | '60s+' | undefined;
   gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | undefined;
   createdAt: Timestamp;
   lastLoginAt: Timestamp;
+  // 新機能追加
+  notificationPreferences?: NotificationPreference;
+}
+
+// Directory User Types（ディレクトリ表示用）
+export interface DirectoryUser {
+  uid: string;
+  name: string;
+  community: string;
+  group: string;
+  registeredAt: Timestamp;
+  region?: string;
+  organization?: string;
+  ageGroup?: '10s' | '20s' | '30s' | '40s' | '50s' | '60s+';
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+}
+
+// Directory Sort Keys
+export type DirectorySortKey = 'community' | 'group' | 'name' | 'registeredAt';
+
+// Directory Hierarchy
+export interface DirectoryHierarchy {
+  communities: {
+    [community: string]: {
+      groups: {
+        [group: string]: DirectoryUser[];
+      };
+    };
+  };
 }
 
 // Room Types
@@ -27,12 +60,57 @@ export interface Room {
   participants: string[];
   aiProxyEnabled: boolean;
   aiProxyConfig: AIProxyConfig;
+  // 新機能追加
+  ownerStatus?: OwnerStatus;
+  aiProxySettings?: AIProxySettings;
+  emergencyCallsEnabled?: boolean;
 }
 
 export interface AIProxyConfig {
   timeoutSecs: number;
   keywords: string[];
   model: 'gpt-4o' | 'gpt-4o-mini' | 'gemini-1.5';
+}
+
+// Owner Status Management Types
+export interface OwnerStatus {
+  status: 'online' | 'away' | 'busy' | 'emergency_only';
+  message?: string;
+  autoAwayTime?: Date;
+  lastActivity: Date;
+  roomId: string;
+  ownerId: string;
+}
+
+export interface AIProxySettings {
+  enabled: boolean;
+  greetingMessage: string;
+  awayMessage: string;
+  busyMessage: string;
+  emergencyMessage: string;
+  autoGreeting: boolean;  // 入室時自動挨拶
+  commandResponse: boolean;  // コマンド応答
+}
+
+// Emergency Call Types
+export interface EmergencyCall {
+  id: string;
+  callerId: string;
+  callerName: string;
+  roomId: string;
+  roomTitle: string;
+  message: string;
+  timestamp: Date;
+  status: 'pending' | 'answered' | 'ignored' | 'timeout';
+  ownerResponse?: string;
+  respondedAt?: Date;
+}
+
+export interface NotificationPreference {
+  browser: boolean;
+  email: boolean;
+  sound: boolean;
+  emailAddress?: string;
 }
 
 // Message Types
@@ -45,6 +123,15 @@ export interface Message {
   isDeleted?: boolean;
   deletedAt?: Timestamp; // メッセージ削除日時
   isAiGenerated?: boolean;
+  readBy?: string[]; // 既読ユーザーのUID配列
+  readStatus?: MessageReadStatus[]; // 詳細な既読情報
+}
+
+// Message Read Status Types
+export interface MessageReadStatus {
+  userId: string;
+  readAt: Timestamp;
+  messageId: string;
 }
 
 // AI Summary Types
@@ -146,8 +233,11 @@ export interface ChatState {
   participants: User[];
   typingUsers: string[];
   isConnected: boolean;
+  isSocketConnected: boolean;
   isLoading: boolean;
   error: string | null;
+  socketError: string | null;
+  realtimeMessages: Message[];
 }
 
 // Message Input Types
@@ -179,4 +269,18 @@ export interface RoomListItem {
   isOwner: boolean;
   isParticipant: boolean;
   hasUnreadMessages: boolean;
+}
+
+// Chat Initiation Types（ディレクトリからのチャット開始）
+export interface ChatInitiationData {
+  targetUserUid: string; // 選択されたユーザー（ルームオーナーになる）
+  initiatorUid: string; // チャットを開始したユーザー
+  chatType: '1v1' | '1vN';
+}
+
+export interface CreateChatWithUserData {
+  targetUserUid: string;
+  initiatorUid: string;
+  chatType: '1v1' | '1vN';
+  visibility: 'private'; // ディレクトリからは常にprivate
 }

@@ -3,6 +3,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/shared/components';
 import { MessageInputData } from '@/types';
+import { FileUpload } from './FileUpload';
+import { FileUploadResult } from '@/lib/firebase/storage';
+import { socketService } from '@/lib/socket/socketService';
 
 interface MessageInputProps {
   onSendMessage: (message: MessageInputData) => Promise<void>;
@@ -103,6 +106,20 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
+  // ファイルアップロード完了時の処理
+  const handleFileUploaded = async (fileData: FileUploadResult, type: 'image' | 'file') => {
+    try {
+      if (type === 'image') {
+        await socketService.sendImageMessage(roomId, fileData);
+      } else {
+        await socketService.sendFileMessage(roomId, fileData);
+      }
+      console.log(`${type} message sent:`, fileData.filename);
+    } catch (error) {
+      console.error('Failed to send file message:', error);
+    }
+  };
+
   // Enterキーでの送信（Shift+Enterで改行）
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -152,15 +169,25 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           </div>
         </div>
         
-        <Button
-          type="submit"
-          disabled={!message.trim() || isSubmitting || disabled}
-          isLoading={isSubmitting}
-          className="px-4 py-2 min-w-[80px]"
-          data-testid="send-message-button"
-        >
-          {isSubmitting ? '送信中' : '送信'}
-        </Button>
+        {/* ファイルアップロードボタン */}
+        <div className="flex items-end space-x-2">
+          <FileUpload
+            roomId={roomId}
+            userId={senderUid}
+            onFileUploaded={handleFileUploaded}
+            disabled={disabled}
+          />
+          
+          <Button
+            type="submit"
+            disabled={!message.trim() || isSubmitting || disabled}
+            isLoading={isSubmitting}
+            className="px-4 py-2 min-w-[80px]"
+            data-testid="send-message-button"
+          >
+            {isSubmitting ? '送信中' : '送信'}
+          </Button>
+        </div>
       </form>
       
       {/* AI代理応答の説明 */}
